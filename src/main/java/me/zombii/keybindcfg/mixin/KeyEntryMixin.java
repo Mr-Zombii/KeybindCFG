@@ -3,117 +3,75 @@ package me.zombii.keybindcfg.mixin;
 import com.google.common.collect.ImmutableList;
 import me.zombii.keybindcfg.KeybindConfig;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.KeybindsScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.util.DyeColor;
+import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Formatting;
-import org.checkerframework.checker.units.qual.K;
-import org.jline.utils.Colors;
 import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.awt.*;
 import java.util.List;
-import java.util.Objects;
-import java.util.logging.Logger;
 
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
-public abstract class KeyEntryMixin {
+public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
 
     @Shadow @Final private KeyBinding binding;
     @Shadow @Final private ButtonWidget editButton;
-    @Shadow private boolean duplicate;
     @Mutable
     @Shadow @Final private ButtonWidget resetButton;
-    @Unique private ButtonWidget lockButton;
     @Shadow @Final private Text bindingName;
     @Unique private static MinecraftClient minecraft = MinecraftClient.getInstance();
 
+    @Unique private ButtonWidget lockButton;
+
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void init(ControlsListWidget arg, KeyBinding binding, Text bindingName, CallbackInfo ci) {
+        lockButton = new ButtonWidget(0, 0, 30, 20, Text.of("Lock"), button -> {
+            KeybindConfig.setModifiable(this.binding.getTranslationKey(), !KeybindConfig.isModifiable(this.binding.getTranslationKey()));
+            KeybindConfig.saveConfig();
+            KeyBinding.updateKeysByCode();
+        }) {
+            @Override
+            public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
+                if (KeybindConfig.isInDevMode) {
+                    super.render(matrices, mouseX, mouseY, delta);
+                }
+            }
+
+            @Override
+            public void onPress() {
+                if (KeybindConfig.isInDevMode) {
+                    super.onPress();
+                }
+            }
+        };
+    }
     /**
      * @author Mr_Zombii
-     * @reason Add keybind disabling
+     * @reason add the lock button
      */
     @Overwrite
-    protected void update() {
-        if (KeybindConfig.isInDevMode) {
-            resetButton = ButtonWidget.builder(Text.translatable("controls.reset"), (button) -> {
-                this.binding.setToDefault();
-                minecraft.options.setKeyCode(binding, binding.getDefaultKey());
-                if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
-                }
-            }).dimensions(0, 0, 32, 20).narrationSupplier((textSupplier) -> {
-                return Text.translatable("narrator.controls.reset", new Object[]{bindingName});
-            }).build();
-            lockButton = ButtonWidget.builder(Text.of("Lock"), (button) -> {
-                KeybindConfig.setModifiable(this.binding.getTranslationKey(), !KeybindConfig.isModifiable(this.binding.getTranslationKey()));
-                KeybindConfig.saveConfig();
-                if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
-                }
-            }).dimensions(0, 0, 30, 20).build();
-        } else {
-            lockButton = null;
-            resetButton = ButtonWidget.builder(Text.translatable("controls.reset"), (button) -> {
-                this.binding.setToDefault();
-                minecraft.options.setKeyCode(binding, binding.getDefaultKey());
-                if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
-                }
-            }).dimensions(0, 0, 50, 20).narrationSupplier((textSupplier) -> {
-                return Text.translatable("narrator.controls.reset", String.valueOf(bindingName));
-            }).build();
-        }
-        this.editButton.setMessage(this.binding.getBoundKeyLocalizedText());
-        this.editButton.active = KeybindConfig.isModifiable(binding.getTranslationKey());
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return this.lockButton.mouseClicked(mouseX, mouseY, button) || this.editButton.mouseClicked(mouseX, mouseY, button) || this.resetButton.mouseClicked(mouseX, mouseY, button);
+    }
 
-        this.duplicate = false;
-        MutableText mutablecomponent = Text.empty();
-        if (!this.binding.isUnbound()) {
-            KeyBinding[] var2 = minecraft.options.allKeys;
-
-            for (KeyBinding keymapping : var2) {
-                if (keymapping != this.binding && this.binding.equals(keymapping) || keymapping.hasKeyModifierConflict(this.binding)) {
-                    if (this.duplicate) {
-                        mutablecomponent.append(", ");
-                    }
-
-                    this.duplicate = true;
-                    mutablecomponent.append(Text.translatable(keymapping.getTranslationKey()));
-                }
-            }
-        }
-
-        if (!KeybindConfig.isModifiable(binding.getTranslationKey())) {
-            this.resetButton.active = false;
-            this.editButton.setTooltip(Tooltip.of(Text.of("The modpack developer has locked this keybind")));
-            this.resetButton.setTooltip(Tooltip.of(Text.of("The modpack developer has locked this keybind")));
-        } else {
-            if (this.duplicate) {
-                this.editButton.setMessage(Text.literal("[ ").append(this.editButton.getMessage().copy().formatted(Formatting.WHITE)).append(" ]").formatted(Formatting.RED));
-                this.editButton.setTooltip(Tooltip.of(Text.translatable("controls.keybinds.duplicateKeybinds", new Object[]{mutablecomponent})));
-            } else {
-                this.editButton.setTooltip(null);
-            }
-            this.resetButton.setTooltip(null);
-            this.resetButton.active = !this.binding.isDefault();
-        }
-
-
-
-        if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-            if (screen.selectedKeyBinding == this.binding) {
-                this.editButton.setMessage(Text.literal("> ").append(this.editButton.getMessage().copy().formatted(new Formatting[]{Formatting.WHITE, Formatting.UNDERLINE})).append(" <").formatted(Formatting.YELLOW));
-            }
-        }
+    /**
+     * @author Mr_Zombii
+     * @reason add the lock button
+     */
+    @Overwrite
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return this.lockButton.mouseReleased(mouseX, mouseY, button) || this.editButton.mouseReleased(mouseX, mouseY, button) || this.resetButton.mouseReleased(mouseX, mouseY, button);
     }
 
     /**
@@ -123,7 +81,7 @@ public abstract class KeyEntryMixin {
     @Overwrite
     public List<? extends Element> children() {
         if (KeybindConfig.isInDevMode)
-            return ImmutableList.of(this.editButton, this.resetButton, lockButton);
+            return ImmutableList.of(this.editButton, this.resetButton, this.lockButton);
         return ImmutableList.of(this.editButton, this.resetButton);
     }
 
@@ -134,7 +92,7 @@ public abstract class KeyEntryMixin {
     @Overwrite
     public List<? extends Selectable> selectableChildren() {
         if (KeybindConfig.isInDevMode)
-            return ImmutableList.of(this.editButton, this.resetButton, lockButton);
+            return ImmutableList.of(this.editButton, this.resetButton, this.lockButton);
         return ImmutableList.of(this.editButton, this.resetButton);
     }
 
@@ -143,30 +101,83 @@ public abstract class KeyEntryMixin {
      * @reason add more things
      */
     @Overwrite
-    public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-        int maxKeyNameLength = 0;
-        if (minecraft.currentScreen instanceof KeybindsScreen screen) maxKeyNameLength = screen.controlsList.maxKeyNameLength;
-        int k = x + 90 - maxKeyNameLength;
-        context.drawText(minecraft.textRenderer, this.bindingName, k, y + entryHeight / 2 - 4, 16777215, false);
-        this.editButton.setX(x + 105);
-        this.editButton.setY(y);
-
-        if (this.duplicate) {
-            int j = this.editButton.getX() - 6;
-            context.fill(j, y + 2, j + 3, y + entryHeight + 2, Formatting.RED.getColorValue() | -16777216);
+    public void render(MatrixStack matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+        if (KeybindConfig.isInDevMode) {
+            this.resetButton = new ButtonWidget(0, 0, 32, 20, new TranslatableText("controls.reset"), (button) -> {
+                this.binding.setToDefault();
+                MinecraftClient.getInstance().options.setKeyCode(binding, binding.getDefaultKey());
+                KeyBinding.updateKeysByCode();
+            }) {
+                protected MutableText getNarrationMessage() {
+                    return new TranslatableText("narrator.controls.reset", new Object[]{bindingName});
+                }
+            };
+        } else {
+            this.resetButton = new ButtonWidget(0, 0, 50, 20, new TranslatableText("controls.reset"), (button) -> {
+                this.binding.setToDefault();
+                MinecraftClient.getInstance().options.setKeyCode(binding, binding.getDefaultKey());
+                KeyBinding.updateKeysByCode();
+            }) {
+                protected MutableText getNarrationMessage() {
+                    return new TranslatableText("narrator.controls.reset", new Object[]{bindingName});
+                }
+            };
         }
 
-        this.editButton.render(context, mouseX, mouseY, tickDelta);
+        int maxKeyNameLength = 0;
+        KeyBinding selected = null;
+        if (minecraft.currentScreen instanceof KeybindsScreen screen) {
+            maxKeyNameLength = screen.controlsList.maxKeyNameLength;
+            selected = screen.selectedKeyBinding;
+        }
+        boolean flag = selected == this.binding;
+        float f = (float)(x + 90 - maxKeyNameLength);
+        MinecraftClient.getInstance().textRenderer.draw(matrices, this.bindingName, f, (float)(y + entryHeight / 2 - 4), 16777215);
+        this.resetButton.x = x + 173 + 27;
+        this.resetButton.y = y;
+        this.resetButton.active = KeybindConfig.isInDevMode ? !this.binding.isDefault() : KeybindConfig.isModifiable(this.binding.getTranslationKey()) ? !this.binding.isDefault() : false;
+        this.resetButton.render(matrices, mouseX, mouseY, tickDelta);
 
-        this.resetButton.setX(x + 173 + 27);
-        this.resetButton.setY(y);
-        this.resetButton.render(context, mouseX, mouseY, tickDelta);
+        this.lockButton.x = x + 173 + 27 + 32;
+        this.lockButton.y = y;
+        this.lockButton.active = true;
+        this.lockButton.setFGColor(KeybindConfig.isModifiable(this.binding.getTranslationKey()) ? 65280 : 16711680);
+        this.lockButton.render(matrices, mouseX, mouseY, tickDelta);
 
-        if (lockButton != null) {
-            this.lockButton.setX(x + 173 + 27 + 32);
-            this.lockButton.setY(y);
-            this.lockButton.setFGColor(KeybindConfig.isModifiable(this.binding.getTranslationKey()) ? 65280 : 16711680);
-            this.lockButton.render(context, mouseX, mouseY, tickDelta);
+        this.editButton.x = x + 105;
+        this.editButton.y = y;
+        this.editButton.active = KeybindConfig.isModifiable(this.binding.getTranslationKey());
+        this.editButton.setMessage(this.binding.getBoundKeyLocalizedText());
+        boolean flag1 = false;
+        boolean keyCodeModifierConflict = true;
+        if (!this.binding.isUnbound()) {
+            KeyBinding[] var15 = MinecraftClient.getInstance().options.allKeys;
+
+            for (KeyBinding keymapping : var15) {
+                if (keymapping != this.binding && this.binding.equals(keymapping)) {
+                    flag1 = true;
+                    keyCodeModifierConflict &= keymapping.hasKeyModifierConflict(this.binding);
+                }
+            }
+        }
+
+        if (flag) {
+            this.editButton.setMessage((new LiteralText("> ")).append(this.editButton.getMessage().shallowCopy().formatted(Formatting.YELLOW)).append(" <").formatted(Formatting.YELLOW));
+        } else if (flag1) {
+            this.editButton.setMessage(this.editButton.getMessage().shallowCopy().formatted(keyCodeModifierConflict ? Formatting.GOLD : Formatting.RED));
+        }
+
+        this.editButton.render(matrices, mouseX, mouseY, tickDelta);
+
+        if (this.resetButton.isHovered() || this.editButton.isHovered()) {
+            if (!KeybindConfig.isInDevMode) {
+                if (!KeybindConfig.isModifiable(binding.getTranslationKey())) {
+                    this.resetButton.active = false;
+                    MinecraftClient.getInstance().currentScreen.renderTooltip(matrices, Text.of("The modpack developer has locked this keybind"), mouseX, mouseY);
+                } else {
+                    this.resetButton.active = !this.binding.isDefault();
+                }
+            }
         }
     }
 

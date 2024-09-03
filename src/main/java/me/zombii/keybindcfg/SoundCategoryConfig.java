@@ -55,15 +55,15 @@ public class SoundCategoryConfig {
         }
     }
 
-    public static double saveCategory(String key, double value) {
+    public static float saveCategory(String key, float value) {
         object.set(key, value);
         return value;
     }
 
-    public static double loadCategory(String key) {
+    public static float loadCategory(String key) {
         JsonValue result = object.get(key);
-        if (result == null) return 1.0;
-        return result.asDouble();
+        if (result == null) return 1.0f;
+        return result.asFloat();
     }
 
 }
