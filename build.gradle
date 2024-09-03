@@ -21,7 +21,6 @@ architectury {
 
 loom {
     forge{
-        accessWidenerPath = file("src\\main\\resources\\keybindcfg.accesswidener")
         mixinConfigs = [
                 "keybindcfg.mixins.json"
         ]

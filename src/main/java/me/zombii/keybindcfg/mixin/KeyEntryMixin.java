@@ -1,6 +1,9 @@
 package me.zombii.keybindcfg.mixin;
 
 import com.google.common.collect.ImmutableList;
+import cpw.mods.modlauncher.Environment;
+import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IEnvironment;
 import me.zombii.keybindcfg.KeybindConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Element;
@@ -20,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
@@ -127,7 +131,34 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
         int maxKeyNameLength = 0;
         KeyBinding selected = null;
         if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-            maxKeyNameLength = screen.controlsList.maxKeyNameLength;
+            Field controlsListField;
+            try {
+                controlsListField = screen.getClass().getDeclaredField("f_193977_");
+            } catch (NoSuchFieldException e) {
+                try {
+                    controlsListField = screen.getClass().getDeclaredField("controlsList");
+                } catch (NoSuchFieldException ex) {
+                    throw new RuntimeException(e);
+                }
+            }
+            controlsListField.setAccessible(true);
+
+            Field maxKeyNameLengthField;
+            try {
+                maxKeyNameLengthField = controlsListField.get(screen).getClass().getDeclaredField("f_193859_");
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                try {
+                    maxKeyNameLengthField = controlsListField.get(screen).getClass().getDeclaredField("maxKeyNameLength");
+                } catch (NoSuchFieldException | IllegalAccessException ex) {
+                    throw new RuntimeException(e);
+                }
+            }
+            maxKeyNameLengthField.setAccessible(true);
+            try {
+                maxKeyNameLength = (int) maxKeyNameLengthField.get(controlsListField.get(screen));
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
             selected = screen.selectedKeyBinding;
         }
         boolean flag = selected == this.binding;
