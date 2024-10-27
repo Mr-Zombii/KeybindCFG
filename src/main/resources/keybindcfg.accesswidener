@@ -1,7 +1,0 @@
-accessWidener v2 named
-
-accessible field net/minecraft/client/gui/screen/option/KeybindsScreen controlsList Lnet/minecraft/client/gui/screen/option/ControlsListWidget;
-accessible field net/minecraft/client/gui/screen/option/ControlsListWidget maxKeyNameLength I
-accessible field net/minecraft/client/gui/screen/option/ControlsListWidget$KeyBindingEntry binding Lnet/minecraft/client/option/KeyBinding;
-accessible method net/minecraft/client/gui/screen/option/ControlsListWidget$Entry update ()V
-extendable method net/minecraft/client/gui/widget/EntryListWidget children ()Ljava/util/List;

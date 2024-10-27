@@ -9,6 +9,8 @@
   "mixins": [],
   "client": [
     "KeyEntryMixin",
-    "OptionsMixin"
+    "OptionsMixin",
+    "accessor.ControlsListWidgetAccessor",
+    "accessor.KeybindsScreenAccessor"
   ]
 }

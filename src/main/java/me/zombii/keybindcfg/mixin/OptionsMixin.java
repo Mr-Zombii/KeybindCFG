@@ -30,6 +30,9 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import javax.annotation.Nullable;
 import java.io.*;
@@ -171,8 +174,8 @@ public abstract class OptionsMixin {
      * @author Mr_Zombii
      * @reason Fix Options Loading
      */
-    @Overwrite
-    public void load(boolean limited) {
+    @Inject(method = "load(Z)V", at = @At("HEAD"), cancellable = true)
+    public void load(boolean limited, CallbackInfo ci) {
         KeybindCFG.loadConfigs();
         try {
             if (!this.optionsFile.exists()) {
@@ -303,7 +306,7 @@ public abstract class OptionsMixin {
         } catch (Exception var8) {
             LOGGER.error("Failed to load options", var8);
         }
-
+        ci.cancel();
     }
 
     /**

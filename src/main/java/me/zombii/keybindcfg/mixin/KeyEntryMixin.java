@@ -2,6 +2,8 @@ package me.zombii.keybindcfg.mixin;
 
 import com.google.common.collect.ImmutableList;
 import me.zombii.keybindcfg.KeybindConfig;
+import me.zombii.keybindcfg.mixin.accessor.ControlsListWidgetAccessor;
+import me.zombii.keybindcfg.mixin.accessor.KeybindsScreenAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
@@ -13,17 +15,10 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.util.DyeColor;
 import net.minecraft.util.Formatting;
-import org.checkerframework.checker.units.qual.K;
-import org.jline.utils.Colors;
 import org.spongepowered.asm.mixin.*;
 
-import java.awt.*;
 import java.util.List;
-import java.util.Objects;
-import java.util.logging.Logger;
 
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
 public abstract class KeyEntryMixin {
@@ -48,7 +43,7 @@ public abstract class KeyEntryMixin {
                 this.binding.setToDefault();
                 minecraft.options.setKeyCode(binding, binding.getDefaultKey());
                 if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
+                    ((KeybindsScreenAccessor)screen).getControlsList().update();
                 }
             }).dimensions(0, 0, 32, 20).narrationSupplier((textSupplier) -> {
                 return Text.translatable("narrator.controls.reset", new Object[]{bindingName});
@@ -57,7 +52,7 @@ public abstract class KeyEntryMixin {
                 KeybindConfig.setModifiable(this.binding.getTranslationKey(), !KeybindConfig.isModifiable(this.binding.getTranslationKey()));
                 KeybindConfig.saveConfig();
                 if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
+                    ((KeybindsScreenAccessor)screen).getControlsList().update();
                 }
             }).dimensions(0, 0, 30, 20).build();
         } else {
@@ -66,7 +61,7 @@ public abstract class KeyEntryMixin {
                 this.binding.setToDefault();
                 minecraft.options.setKeyCode(binding, binding.getDefaultKey());
                 if (minecraft.currentScreen instanceof KeybindsScreen screen) {
-                    screen.controlsList.update();
+                    ((KeybindsScreenAccessor)screen).getControlsList().update();
                 }
             }).dimensions(0, 0, 50, 20).narrationSupplier((textSupplier) -> {
                 return Text.translatable("narrator.controls.reset", String.valueOf(bindingName));
@@ -145,7 +140,7 @@ public abstract class KeyEntryMixin {
     @Overwrite
     public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
         int maxKeyNameLength = 0;
-        if (minecraft.currentScreen instanceof KeybindsScreen screen) maxKeyNameLength = screen.controlsList.maxKeyNameLength;
+        if (minecraft.currentScreen instanceof KeybindsScreen screen) maxKeyNameLength = ((ControlsListWidgetAccessor)((KeybindsScreenAccessor)screen).getControlsList()).getMaxKeyNameLength();
         int k = x + 90 - maxKeyNameLength;
         context.drawText(minecraft.textRenderer, this.bindingName, k, y + entryHeight / 2 - 4, 16777215, false);
         this.editButton.setX(x + 105);
