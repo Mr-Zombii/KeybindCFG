@@ -17,6 +17,9 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
@@ -32,12 +35,8 @@ public abstract class KeyEntryMixin {
     @Shadow @Final private Text bindingName;
     @Unique private static MinecraftClient minecraft = MinecraftClient.getInstance();
 
-    /**
-     * @author Mr_Zombii
-     * @reason Add keybind disabling
-     */
-    @Overwrite
-    protected void update() {
+    @Inject(method = "update", at = @At("HEAD"))
+    private void updateInject(CallbackInfo ci) {
         if (KeybindConfig.isInDevMode) {
             resetButton = ButtonWidget.builder(Text.translatable("controls.reset"), (button) -> {
                 this.binding.setToDefault();
@@ -67,10 +66,15 @@ public abstract class KeyEntryMixin {
                 return Text.translatable("narrator.controls.reset", String.valueOf(bindingName));
             }).build();
         }
-        this.editButton.setMessage(this.binding.getBoundKeyLocalizedText());
-        this.editButton.active = KeybindConfig.isModifiable(binding.getTranslationKey());
+    }
 
-        this.duplicate = false;
+    @Inject(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/widget/ButtonWidget;setMessage(Lnet/minecraft/text/Text;)V", ordinal = 0, shift = At.Shift.AFTER))
+    private void update0(CallbackInfo ci) {
+        this.editButton.active = KeybindConfig.isModifiable(binding.getTranslationKey());
+    }
+
+    @Inject(method = "update", at = @At("TAIL"))
+    private void update(CallbackInfo ci) {
         MutableText mutablecomponent = Text.empty();
         if (!this.binding.isUnbound()) {
             KeyBinding[] var2 = minecraft.options.allKeys;
@@ -102,14 +106,32 @@ public abstract class KeyEntryMixin {
             this.resetButton.active = !this.binding.isDefault();
         }
 
-
-
         if (minecraft.currentScreen instanceof KeybindsScreen screen) {
             if (screen.selectedKeyBinding == this.binding) {
                 this.editButton.setMessage(Text.literal("> ").append(this.editButton.getMessage().copy().formatted(new Formatting[]{Formatting.WHITE, Formatting.UNDERLINE})).append(" <").formatted(Formatting.YELLOW));
             }
         }
     }
+
+//    /**
+//     * @author Mr_Zombii
+//     * @reason Add keybind disabling
+//     */
+//    @Overwrite
+//    protected void update() {
+//
+//        this.editButton.setMessage(this.binding.getBoundKeyLocalizedText());
+//        this.editButton.active = KeybindConfig.isModifiable(binding.getTranslationKey());
+//
+//        this.duplicate = false;
+//
+//
+//
+//
+//
+//
+//
+//    }
 
     /**
      * @author Mr_Zombii
