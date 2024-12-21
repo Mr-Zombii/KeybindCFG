@@ -1,14 +1,14 @@
 package me.zombii.keybindcfg.mixin.accessor;
 
-import net.minecraft.client.gui.screen.option.ControlsListWidget;
-import net.minecraft.client.gui.screen.option.KeybindsScreen;
+import net.minecraft.client.gui.GuiControls;
+import net.minecraft.client.gui.GuiKeyBindingList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(KeybindsScreen.class)
+@Mixin(GuiControls.class)
 public interface KeybindsScreenAccessor {
 
-    @Accessor("controlsList")
-    ControlsListWidget getControlsList();
+    @Accessor("keyBindingList")
+    GuiKeyBindingList getKeyBindingList();
 
 }

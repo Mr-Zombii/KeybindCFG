@@ -1,6 +1,7 @@
 package me.zombii.keybindcfg;
 
-import net.minecraft.client.MinecraftClient;
+import me.zombii.keybindcfg.util.NativeArrayUtil;
+import net.minecraft.client.Minecraft;
 import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 import org.hjson.Stringify;
@@ -12,8 +13,8 @@ import java.io.IOException;
 
 public class PlayerPartsConfig {
 
-    private static final File file = new File(MinecraftClient.getInstance().runDirectory.getAbsolutePath() + "/enabledPlayerParts.json");
-    private static JsonObject object;
+    private static final File file = new File(Minecraft.getMinecraft().gameDir.getAbsolutePath() + "/enabledPlayerParts_1.12.2.json");
+    private static JsonObject object = new JsonObject();
     static boolean hasLoadedBefore;
 
     public static void loadConfig() {
@@ -26,7 +27,7 @@ public class PlayerPartsConfig {
         }
         try {
             FileInputStream stream = new FileInputStream(file);
-            object = JsonObject.readHjson(new String(stream.readAllBytes())).asObject();
+            object = JsonObject.readHjson(new String(NativeArrayUtil.readNBytes(stream, Integer.MAX_VALUE))).asObject();
             stream.close();
 
         } catch (IOException e) {
@@ -61,10 +62,10 @@ public class PlayerPartsConfig {
         return value;
     }
 
-    public static String loadPart(String key) {
+    public static boolean loadPart(String key) {
         JsonValue result = object.get(key);
-        if (result == null) return "true";
-        return result.asBoolean() + "";
+        if (result == null) return true;
+        return result.asBoolean();
     }
 
 }

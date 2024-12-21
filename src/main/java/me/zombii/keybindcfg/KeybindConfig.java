@@ -1,6 +1,8 @@
 package me.zombii.keybindcfg;
 
-import net.minecraft.client.MinecraftClient;
+import me.zombii.keybindcfg.util.NativeArrayUtil;
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.client.settings.KeyModifier;
 import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 import org.hjson.Stringify;
@@ -15,8 +17,8 @@ public class KeybindConfig {
 
     public static boolean isInDevMode;
 
-    private static final File file = new File(MinecraftClient.getInstance().runDirectory.getAbsolutePath() + "/keybinds.json");
-    private static JsonObject object;
+    public static final File file = new File(Minecraft.getMinecraft().gameDir.getAbsolutePath() + "/keybinds_1.12.2.json");
+    private static JsonObject object = new JsonObject();
     static boolean hasLoadedBefore;
 
     public static void loadConfig() {
@@ -29,7 +31,7 @@ public class KeybindConfig {
         }
         try {
             FileInputStream stream = new FileInputStream(file);
-            object = JsonObject.readHjson(new String(stream.readAllBytes())).asObject();
+            object = JsonObject.readHjson(new String(NativeArrayUtil.readNBytes(stream, Integer.MAX_VALUE))).asObject();
             stream.close();
 
             try {
@@ -67,9 +69,10 @@ public class KeybindConfig {
         }
     }
 
-    public static String saveKey(String key, String value) {
+    public static void saveKey(String key, int modifier, int code) {
         JsonObject keybind = new JsonObject();
-        keybind.set("value", value);
+        keybind.set("modifier", modifier);
+        keybind.set("code", code);
 
         if (object.get(key) != null) {
             JsonValue value1 = object.get(key).asObject().get("canModify");
@@ -79,7 +82,6 @@ public class KeybindConfig {
         }
 
         object.set(key, keybind);
-        return value;
     }
 
     public static boolean isModifiable(String key) {
@@ -103,4 +105,17 @@ public class KeybindConfig {
         return result.asObject().get("value") == null ? null : result.asObject().get("value").asString();
     }
 
+    public static KeyModifier loadKeyModifier(String key) {
+        JsonValue result = object.get(key);
+        if (result == null) return KeyModifier.NONE;
+
+        return KeyModifier.values()[result.asObject().get("modifier") == null ? 3 : result.asObject().get("modifier").asInt()];
+    }
+
+    public static int loadKeyCode(String key) {
+        JsonValue result = object.get(key);
+        if (result == null) return 0;
+
+        return result.asObject().get("code") == null ? 0 : result.asObject().get("code").asInt();
+    }
 }
