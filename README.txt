@@ -1,3 +1,5 @@
+## This thing was a pain and is a pain. I will not be updating this any time soon nor fixing more issues. Especially with forge.
+
 
 Source installation information for modders
 -------------------------------------------
